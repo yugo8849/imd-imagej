@@ -1,188 +1,220 @@
 # Intensity Modulated Display (IMD) for ImageJ/Fiji
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![ImageJ](https://img.shields.io/badge/ImageJ-1.53c%2B-blue.svg)](https://imagej.net/)
+A macro for ImageJ/Fiji that creates intensity-modulated FRET ratio displays normalized by donor (CFP) intensity.
 
-FRET比率画像をCFP輝度で規格化した見やすいカラー表示に変換するImageJ/Fijiマクロです。
+## Overview
 
-![IMD Example](https://via.placeholder.com/800x300/667eea/ffffff?text=IMD+Example+Image)
-*Physics LUTによる見やすいカラー表示とCFP輝度による明るさの規格化*
+This macro converts FRET/CFP ratio images into color-coded displays with intensity modulation, making it easier to visualize both FRET activity and cell localization simultaneously.
 
-## ✨ 主な機能
+**Key Features:**
+- Dialog-based image selection
+- Automatic FRET/CFP ratio calculation
+- Dynamic LUT (color map) selection from all available ImageJ LUTs
+- Test mode for rapid parameter optimization
+- Rolling ball background subtraction
+- Batch processing mode
+- Automatic parameter saving and loading
+- Support for both stack and single images
 
-- 🎯 **簡単操作**: ダイアログで画像を選択するだけ
-- ⚡ **高速**: Test modeで最初のフレームのみ処理してパラメータ調整
-- 🎨 **美しい出力**: Physics LUTとCFP輝度規格化による見やすい表示
-- 🔧 **多機能**: バックグラウンド減算、Batch mode、パラメータ保存
-- 📊 **柔軟**: Stack画像/単一画像の両方に対応
+## Requirements
 
-## 🚀 クイックスタート
+- ImageJ 1.53c or later
+- Fiji (compatible)
+- Operating System: Windows, Mac, or Linux
+- No additional plugins required
 
-### インストール（3ステップ）
+## Installation
 
-1. **[Intensity_Modulated_Display.ijm](https://github.com/yourusername/IMD-ImageJ/releases/latest/download/Intensity_Modulated_Display.ijm) をダウンロード**
+### Quick Installation (3 steps)
 
-2. **ImageJ/Fijiの `plugins/` フォルダに配置**
+1. Download `Intensity_Modulated_Display.ijm`
+2. Copy to ImageJ's `plugins/` folder:
    - Windows: `C:\Program Files\ImageJ\plugins\`
-   - Mac: `/Applications/ImageJ.app/plugins/`（パッケージの内容を表示）
+   - Mac: `/Applications/ImageJ.app/plugins/` (right-click app, "Show Package Contents")
    - Linux: `~/ImageJ/plugins/`
+3. Restart ImageJ
 
-3. **ImageJを再起動**
-   - **Plugins** メニューに "Intensity Modulated Display" が表示されます
+The macro will appear in the **Plugins** menu.
 
-### 使い方（5ステップ）
+### Detailed Installation
 
-1. FRET画像とCFP画像をImageJで開く
-2. **Plugins > Intensity Modulated Display** を実行
-3. ダイアログで画像とパラメータを設定
-4. Stack画像の場合は **Test mode** で素早くパラメータ調整
-5. **OK** → 完成！
+See [INSTALLATION.md](INSTALLATION.md) for complete instructions including JAR installation and troubleshooting.
 
-詳しくは [QUICKSTART.md](QUICKSTART.md) をご覧ください。
+## Quick Start
 
-## 📋 動作環境
+### Basic Workflow
 
-- **ImageJ**: 1.53c 以降
-- **Fiji**: 対応
-- **OS**: Windows, Mac, Linux
-- **追加プラグイン**: 不要
+1. Open FRET and CFP images in ImageJ
+2. Run **Plugins > Intensity Modulated Display**
+3. Select images and parameters in the dialog
+4. For stacks, use **Test mode** to optimize parameters quickly
+5. Click **OK** to process
 
-## 📖 機能詳細
+### Example Parameters
 
-### Test Mode（パラメータ調整用）
-Stack画像の最初のフレームのみを処理して、パラメータを素早く調整できます。
-```
-✓ Test mode ON → パラメータ調整 → 保存
-✓ Test mode OFF → 全フレーム処理
-```
+- Ratio max: 3 (adjust based on your FRET/CFP ratio range)
+- Ratio min: -1
+- Donor max: 6000 (adjust based on CFP intensity histogram)
+- Donor min: 0
+- LUT: physics (or choose from available LUTs)
+- Background subtraction: optional (radius 50-100 recommended)
+
+## Features
+
+### LUT Selection
+
+Choose from all LUTs installed in ImageJ:
+- Built-in LUTs: physics, Fire, Jet, Spectrum, Thermal, and more
+- Custom LUTs: Any .lut files in ImageJ/luts/ folder are automatically detected
+
+**Adding Custom LUTs:**
+1. Place .lut files in `ImageJ/luts/` folder
+2. Restart ImageJ
+3. Custom LUTs will appear in the macro's LUT dropdown
+
+See [CUSTOM_LUT_GUIDE.md](CUSTOM_LUT_GUIDE.md) for details.
+
+### Test Mode
+
+For stack images, Test mode processes only the first frame, allowing rapid parameter adjustment without processing the entire stack.
+
+**Recommended Workflow:**
+1. Enable Test mode
+2. Adjust parameters and run multiple times
+3. Save parameters when satisfied
+4. Disable Test mode and process full stack
 
 ### Background Subtraction
-Rolling ballアルゴリズムによるバックグラウンド減算を自動実行。
-```
-Rolling ball radius: 50（細胞サイズより大きい値を推奨）
-```
+
+Optional rolling ball background subtraction with adjustable radius.
+- Recommended radius: larger than cell diameter (typically 50-100)
+- Applied to both FRET and CFP images before ratio calculation
 
 ### Batch Mode
-画像処理中の中間画像を非表示にして、高速化とちらつき防止。
+
+Hides intermediate images during processing for cleaner interface and faster performance.
 
 ### Parameter Persistence
-パラメータは自動的に保存され、次回実行時に読み込まれます。
-```
-ImageJディレクトリ/IMD_parameters.txt
-```
 
-## 🎓 パラメータガイド
+Parameters are automatically saved to `IMD_parameters.txt` in the ImageJ directory and loaded on next run.
 
-| パラメータ | 説明 | デフォルト値 | 調整のポイント |
-|-----------|------|------------|--------------|
-| Ratio max/min | FRET/CFP比率の表示範囲 | -1 ～ 3 | Ratio画像のヒストグラムを確認 |
-| Donor max/min | CFP輝度の規格化範囲 | 0 ～ 6000 | CFP画像のヒストグラムを確認 |
-| Rolling ball radius | バックグラウンド減算 | 50 | 細胞サイズより大きく |
+## Parameters
 
-## 📚 ドキュメント
+### Ratio Range
+- **Ratio max/min**: Display range for FRET/CFP ratio
+- Check ratio image histogram to determine appropriate range
 
-- **[QUICKSTART.md](QUICKSTART.md)** - 5分で始めるガイド
-- **[USER_GUIDE.md](USER_GUIDE.md)** - 詳細な使用方法
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - トラブルシューティング
-- **[UNINSTALL.md](UNINSTALL.md)** - アンインストール方法
-- **[CHANGELOG.md](CHANGELOG.md)** - 変更履歴
+### Donor Intensity Range
+- **Donor max/min**: Normalization range for CFP intensity
+- Check CFP histogram (Analyze > Histogram) to determine range
 
-## 💡 使用例
+### Display Options
+- **LUT**: Color map for ratio display
+- Choose from all available ImageJ LUTs
 
-### 基本的なワークフロー
+### Processing Options
+- **Test mode**: Process first frame only (stack images)
+- **Background subtraction**: Apply rolling ball algorithm
+- **Rolling ball radius**: Size for background subtraction
+- **Save parameters**: Save settings to file
+- **Batch mode**: Hide intermediate images
 
-```
-1. FRET & CFP Stack画像を開く
-2. Plugins > Intensity Modulated Display
-3. ✓ Test mode ON でパラメータ調整
-4. ✓ Save parameters で設定保存
-5. ✓ Test mode OFF で全フレーム処理
-```
+## Output
 
-### パラメータ調整のコツ
+Output image is named: `IMD-Rmax[X]-Rmin[Y]-Dmax[Z]-Dmin[W]-[LUT].tif`
 
-1. **Ratio range**: FRET/CFPの典型的な値の範囲に設定
-2. **Donor range**: CFPのヒストグラムで輝度分布を確認
-3. **Test mode**: 100フレームのStackでも数秒で結果確認
+The image is an RGB color image combining:
+- Ratio values mapped to the selected LUT
+- Intensity modulated by CFP (donor) brightness
 
-## 🔬 科学的背景
+## Documentation
 
-このマクロは、FRET（Förster Resonance Energy Transfer）イメージングにおいて、比率画像を見やすく表示するための手法です。
+- **QUICKSTART.md** - 5-minute getting started guide
+- **USER_GUIDE.md** - Detailed usage instructions
+- **CUSTOM_LUT_GUIDE.md** - Guide for adding custom LUTs
+- **TROUBLESHOOTING.md** - Common issues and solutions
+- **INSTALLATION.md** - Complete installation instructions
+- **CHANGELOG.md** - Version history
 
-### 特徴
-- **Physics LUT**: 比率値をカラーで表示（青→緑→黄→赤）
-- **Intensity Modulation**: CFP輝度で明るさを規格化
-- **利点**: 細胞内の局在と活性を同時に視覚化
+## Scientific Background
 
-## 📊 動作原理
+This macro implements intensity-modulated display for FRET imaging:
+- FRET/CFP ratio values are pseudocolored using the selected LUT
+- Brightness is normalized by CFP (donor) intensity
+- Result shows both FRET activity (color) and localization (brightness)
 
-```
-1. FRET画像とCFP画像から比率を計算
-2. 比率値をPhysics LUTで疑似カラー化
-3. CFP輝度で明るさを規格化
-4. RGB画像として出力
-```
+## Troubleshooting
 
-## 🤝 貢献
+### Macro not appearing in menu
+- Restart ImageJ
+- Verify file is in `plugins/` folder
+- Check file has .ijm extension
 
-バグ報告、機能リクエスト、プルリクエストを歓迎します！
+### Dark or bright results
+- Adjust Donor max/min based on CFP histogram
+- Use Test mode to optimize quickly
 
-### 開発環境
+### LUT not appearing
+- Verify .lut file is in `ImageJ/luts/` folder
+- File size should be 768 bytes
+- Restart ImageJ after adding LUTs
+
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for more solutions.
+
+## Version History
+
+### v1.1.0 (2024-12-02)
+- Added dynamic LUT selection from all available ImageJ LUTs
+- Added support for custom LUTs
+- Improved RGB color output consistency
+- LUT name included in output filename
+
+### v1.0.0 (2024-11-06)
+- Initial release
+- Dialog-based image selection
+- Test mode implementation
+- Background subtraction
+- Parameter persistence
+
+See [CHANGELOG.md](CHANGELOG.md) for complete history.
+
+## Contributing
+
+Bug reports, feature requests, and pull requests are welcome.
+
+### Development
 
 ```bash
-# リポジトリのクローン
-git clone https://github.com/yourusername/IMD-ImageJ.git
-
-# マクロの編集
-# ImageJのScript Editorで編集可能
+git clone https://github.com/yugo8849/imd-imagej.git
+cd imd-imagej
 ```
 
-## 📄 ライセンス
+Edit the macro in ImageJ's Script Editor or any text editor.
 
-MIT License - 詳細は [LICENSE](LICENSE) をご覧ください。
+## License
 
-## 📖 引用
+MIT License - see [LICENSE](LICENSE) for details.
 
-研究でこのマクロを使用された場合は、以下のように引用してください：
+## Citation
+
+If you use this macro in your research, please cite:
 
 ```
 Intensity Modulated Display (IMD) for ImageJ (2024)
-GitHub: https://github.com/yourusername/IMD-ImageJ
+GitHub: https://github.com/yugo8849/imd-imagej
 ```
 
-## 🆘 サポート
+## Support
 
-- 💬 [GitHub Issues](https://github.com/yourusername/IMD-ImageJ/issues) で質問・バグ報告
-- 📖 [Discussions](https://github.com/yourusername/IMD-ImageJ/discussions) でディスカッション
-- 📧 Email: your.email@example.com
+- Issues: https://github.com/yugo8849/imd-imagej/issues
+- Discussions: https://github.com/yugo8849/imd-imagej/discussions
 
-## ⭐ Star History
-
-もしこのプロジェクトが役に立ったら、ぜひスターをお願いします！
-
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/IMD-ImageJ&type=Date)](https://star-history.com/#yourusername/IMD-ImageJ&Date)
-
-## 🎉 更新履歴
-
-### v1.0.0 (2024-11-06)
-- 初回リリース
-- ダイアログによる画像選択
-- Test mode実装
-- バックグラウンド減算
-- パラメータ保存機能
-
-詳細は [CHANGELOG.md](CHANGELOG.md) をご覧ください。
-
----
-
-## 🌟 謝辞
+## Acknowledgments
 
 - Developed with assistance from Claude (Anthropic)
-- Based on the original IMD macro
-- Thanks to all contributors and users
+- Based on the original IMD macro concept
+- Thanks to all users and contributors
 
 ---
 
-**Happy Imaging! 🔬**
-
-*Version 1.0.0 - November 2024*
+**Version 1.1.0 - December 2024**
