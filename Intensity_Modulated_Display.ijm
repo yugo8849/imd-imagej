@@ -229,21 +229,15 @@ if (subtractBG) {
 }
 
 if (isStack) {
-    imageCalculator("Divide create stack", "FRET_copy", "CFP_copy");
+    imageCalculator("Divide create 32-bit stack", "FRET_copy", "CFP_copy");
 } else {
-    imageCalculator("Divide create", "FRET_copy", "CFP_copy");
+    imageCalculator("Divide 32-bit create", "FRET_copy", "CFP_copy");
 }
 rename("Ratio_FRET_CFP");
 rname = "Ratio_FRET_CFP";
 
-// Close temporary copies
-selectWindow("FRET_copy");
-close();
-selectWindow("CFP_copy");
-close();
-
 // Use CFP as donor image
-dname = cfpName;
+dname = "CFP_copy";
 
 // ============================================================
 // IMD PROCESSING (Original Algorithm)
@@ -359,6 +353,10 @@ rename(finalName);
 selectWindow("mask");
 close();
 selectWindow(rname);
+close();
+selectWindow("FRET_copy");
+close();
+selectWindow("CFP_copy");
 close();
 
 // Clean up test mode temporary images
