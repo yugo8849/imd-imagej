@@ -25,7 +25,18 @@ This macro converts FRET/CFP ratio images into color-coded displays with intensi
 
 ## Installation
 
-### Quick Installation (3 steps)
+### Installation as Plugin (recommended)
+
+1. Download `Intensity_Modulated_Display-1.1.0.jar`
+2. Copy to ImageJ's `plugins/` folder:
+   - Windows: `C:\Program Files\ImageJ\plugins\`
+   - Mac: `/Applications/ImageJ.app/plugins/` (right-click app, "Show Package Contents")
+   - Linux: `~/ImageJ/plugins/`
+3. Restart ImageJ
+
+The plugin will appear in the **Plugins/FRET** menu.
+
+### Installation as Macro (if you need modification)
 
 1. Download `Intensity_Modulated_Display.ijm`
 2. Copy to ImageJ's `plugins/` folder:
@@ -35,10 +46,6 @@ This macro converts FRET/CFP ratio images into color-coded displays with intensi
 3. Restart ImageJ
 
 The macro will appear in the **Plugins** menu.
-
-### Detailed Installation
-
-See [INSTALLATION.md](INSTALLATION.md) for complete instructions including JAR installation and troubleshooting.
 
 ## Quick Start
 
@@ -52,10 +59,10 @@ See [INSTALLATION.md](INSTALLATION.md) for complete instructions including JAR i
 
 ### Example Parameters
 
-- Ratio max: 3 (adjust based on your FRET/CFP ratio range)
-- Ratio min: -1
+- Ratio max: 2 (adjust based on your FRET/CFP ratio range)
+- Ratio min: 1
 - Donor max: 6000 (adjust based on CFP intensity histogram)
-- Donor min: 0
+- Donor min: 100
 - LUT: physics (or choose from available LUTs)
 - Background subtraction: optional (radius 50-100 recommended)
 
