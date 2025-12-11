@@ -207,7 +207,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 If you use this macro in your research, please cite:
 
 ```
-Intensity Modulated Display (IMD) for ImageJ (2024)
+Intensity Modulated Display (IMD) for ImageJ (2025)
 GitHub: https://github.com/yugo8849/imd-imagej
 ```
 
@@ -219,9 +219,9 @@ GitHub: https://github.com/yugo8849/imd-imagej
 ## Acknowledgments
 
 - Developed with assistance from Claude (Anthropic)
-- Based on the original IMD macro concept
+- Based on the original IMD macro concept (Dr. Yohei Kondo)
 - Thanks to all users and contributors
 
 ---
 
-**Version 1.1.0 - December 2024**
+**Version 1.1.0 - December 2025**
