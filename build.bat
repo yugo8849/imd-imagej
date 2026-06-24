@@ -35,7 +35,7 @@ if %ERRORLEVEL% EQU 0 (
     echo BUILD SUCCESSFUL!
     echo ================================
     echo.
-    echo JAR file created: target\Intensity_Modulated_Display-1.1.0.jar
+    echo JAR file created: target\Intensity_Modulated_Display-2.0.1.jar
     echo.
     echo Next steps:
     echo 1. Copy the JAR to Fiji.app\plugins\

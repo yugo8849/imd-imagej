@@ -14,6 +14,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 
  * High-performance FRET ratio visualization with intensity modulation.
  * 
+ * New in v2.0:
+ * - Single multi-channel stack input mode: select acceptor/donor channels
+ *   from one hyperstack instead of two separate images
+ * - Background subtraction via the "Subtract Background Plus" plugin
+ *   (Sliding paraboloid / Rolling ball / Morphological opening), applied
+ *   to all slices of a stack
+ * 
  * Bug fixes in v1.1:
  * - Ratio calculation now uses 32-bit float (was integer division)
  * - Mask uses background-subtracted image (was using original)
@@ -21,7 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * - LUT selection fixed
  * 
  * @author Converted and optimized from ImageJ macro
- * @version 1.1.0
+ * @version 2.0.1
  */
 public class Intensity_Modulated_Display implements PlugIn {
     
@@ -31,18 +38,33 @@ public class Intensity_Modulated_Display implements PlugIn {
     private static double dmax = 6000.0;
     private static double dmin = 0.0;
     private static double rollingBallRadius = 50.0;
+    private static double bgSmoothing = 2.0;          // New: Subtract Background Plus pre-smoothing sigma
+    private static String bgMethod = "Sliding paraboloid (separable, fast)";  // New: BG method
     private static String lutChoice = "physics";
     private static boolean testMode = false;
     private static boolean subtractBG = false;
     private static boolean saveParams = true;
     private static boolean useMultiThread = true;
     private static String maskSource = "CFP (Donor)";  // New: mask source selection
-    
+
+    // Input mode (New: support a single multi-channel stack)
+    private static boolean isMultiChannel = false;
+    private static int acceptorChannel = 1;
+    private static int donorChannel = 2;
+
     // Mask source options
     private static final String[] MASK_SOURCES = {"CFP (Donor)", "FRET", "Average (CFP+FRET)/2"};
-    
+
+    // Background subtraction methods (labels must match Subtract Background Plus exactly)
+    private static final String[] BG_METHODS = {
+        "Sliding paraboloid (separable, fast)",
+        "Rolling ball (full resolution)",
+        "Morphological opening (flat disk)"
+    };
+
     private int fretIndex = 0;
     private int cfpIndex = 1;
+    private int multiIndex = 0;
     
     // LUT cache
     private byte[] lutReds = new byte[256];
@@ -51,48 +73,86 @@ public class Intensity_Modulated_Display implements PlugIn {
     
     @Override
     public void run(String arg) {
+        // Select input mode first (New)
+        if (!selectInputMode()) return;
+
         // Check for open images
         int[] imageIDs = WindowManager.getIDList();
-        if (imageIDs == null || imageIDs.length < 2) {
-            IJ.error("IMD Error", "Please open at least 2 images (FRET and CFP).");
+        int minImages = isMultiChannel ? 1 : 2;
+        if (imageIDs == null || imageIDs.length < minImages) {
+            if (isMultiChannel) {
+                IJ.error("IMD Error", "Please open a multi-channel stack.");
+            } else {
+                IJ.error("IMD Error", "Please open at least 2 images (FRET and CFP).");
+            }
             return;
         }
-        
+
         // Get image titles
         String[] imageTitles = new String[imageIDs.length];
         for (int i = 0; i < imageIDs.length; i++) {
             imageTitles[i] = WindowManager.getImage(imageIDs[i]).getTitle();
         }
-        
+
         // Load saved parameters
         loadParameters();
-        
+
         // Show dialog
         if (!showDialog(imageTitles)) return;
-        
-        // Get selected images
-        ImagePlus fretImp = WindowManager.getImage(imageIDs[fretIndex]);
-        ImagePlus cfpImp = WindowManager.getImage(imageIDs[cfpIndex]);
-        
-        // Validation
-        if (fretImp == cfpImp) {
-            IJ.error("IMD Error", "Please select different images for FRET and CFP.");
-            return;
+
+        // Get selected images (New: branch by input mode)
+        ImagePlus fretImp, cfpImp;
+        boolean extractedChannels = false;
+
+        if (isMultiChannel) {
+            ImagePlus multiImp = WindowManager.getImage(imageIDs[multiIndex]);
+            int channels = multiImp.getNChannels();
+            if (channels < 2) {
+                IJ.error("IMD Error", "Selected image has only " + channels + " channel(s). Need at least 2.");
+                return;
+            }
+            if (acceptorChannel < 1 || acceptorChannel > channels || donorChannel < 1 || donorChannel > channels) {
+                IJ.error("IMD Error", "Channel numbers must be between 1 and " + channels + ".");
+                return;
+            }
+            if (acceptorChannel == donorChannel) {
+                IJ.error("IMD Error", "Acceptor and Donor channels must be different.");
+                return;
+            }
+            fretImp = extractChannel(multiImp, acceptorChannel);
+            cfpImp = extractChannel(multiImp, donorChannel);
+            extractedChannels = true;
+        } else {
+            fretImp = WindowManager.getImage(imageIDs[fretIndex]);
+            cfpImp = WindowManager.getImage(imageIDs[cfpIndex]);
+
+            // Validation
+            if (fretImp == cfpImp) {
+                IJ.error("IMD Error", "Please select different images for FRET and CFP.");
+                return;
+            }
         }
-        
+
         if (fretImp.getStackSize() != cfpImp.getStackSize()) {
             IJ.error("IMD Error", "FRET and CFP must have the same number of slices.");
+            if (extractedChannels) { fretImp.close(); cfpImp.close(); }
             return;
         }
-        
+
         // Save parameters
         if (saveParams) saveParameters();
-        
+
         // Process
         long startTime = System.currentTimeMillis();
         ImagePlus result = processIMD(fretImp, cfpImp);
         long elapsed = System.currentTimeMillis() - startTime;
-        
+
+        // Clean up extracted channel images (New)
+        if (extractedChannels) {
+            fretImp.close();
+            cfpImp.close();
+        }
+
         if (result != null) {
             result.show();
             IJ.log("=== IMD Complete ===");
@@ -102,6 +162,29 @@ public class Intensity_Modulated_Display implements PlugIn {
                 IJ.log("*** TEST MODE: Only first frame processed ***");
             }
         }
+    }
+
+    /**
+     * Select input mode: two separate images, or a single multi-channel stack. (New)
+     */
+    private boolean selectInputMode() {
+        GenericDialog gd = new GenericDialog("IMD - Input Mode");
+        gd.addMessage("How are your FRET (acceptor) and donor data arranged?");
+        String[] modes = {"Two separate images", "Single multi-channel stack"};
+        gd.addChoice("Input mode:", modes, isMultiChannel ? modes[1] : modes[0]);
+        gd.showDialog();
+        if (gd.wasCanceled()) return false;
+        isMultiChannel = gd.getNextChoice().equals("Single multi-channel stack");
+        return true;
+    }
+
+    /**
+     * Extract a single channel (all Z and T) from a multi-channel image. (New)
+     */
+    private ImagePlus extractChannel(ImagePlus imp, int channel) {
+        int nSlices = imp.getNSlices();
+        int nFrames = imp.getNFrames();
+        return new Duplicator().run(imp, channel, channel, 1, nSlices, 1, nFrames);
     }
     
     /**
@@ -128,12 +211,27 @@ public class Intensity_Modulated_Display implements PlugIn {
                 break;
             }
         }
+
+        // Find BG method index (New)
+        int bgMethodIndex = 0;
+        for (int i = 0; i < BG_METHODS.length; i++) {
+            if (BG_METHODS[i].equals(bgMethod)) {
+                bgMethodIndex = i;
+                break;
+            }
+        }
         
-        GenericDialog gd = new GenericDialog("IMD - Intensity Modulated Display v1.1");
+        GenericDialog gd = new GenericDialog("IMD - Intensity Modulated Display v2.0.1");
         
         gd.addMessage("=== Image Selection ===");
-        gd.addChoice("FRET image:", imageTitles, imageTitles[0]);
-        gd.addChoice("CFP (Donor) image:", imageTitles, imageTitles[Math.min(1, imageTitles.length-1)]);
+        if (isMultiChannel) {
+            gd.addChoice("Multi-channel image:", imageTitles, imageTitles[0]);
+            gd.addNumericField("Acceptor (FRET) channel:", acceptorChannel, 0);
+            gd.addNumericField("Donor (CFP) channel:", donorChannel, 0);
+        } else {
+            gd.addChoice("FRET image:", imageTitles, imageTitles[0]);
+            gd.addChoice("CFP (Donor) image:", imageTitles, imageTitles[Math.min(1, imageTitles.length-1)]);
+        }
         
         gd.addMessage("=== Ratio Range ===");
         gd.addNumericField("Ratio max:", rmax, 2);
@@ -149,8 +247,10 @@ public class Intensity_Modulated_Display implements PlugIn {
         
         gd.addMessage("=== Processing Options ===");
         gd.addCheckbox("Test mode (first frame only)", testMode);
-        gd.addCheckbox("Subtract background (Rolling ball)", subtractBG);
-        gd.addNumericField("Rolling ball radius:", rollingBallRadius, 0);
+        gd.addCheckbox("Subtract background (Subtract Background Plus)", subtractBG);
+        gd.addChoice("BG method:", BG_METHODS, BG_METHODS[bgMethodIndex]);
+        gd.addNumericField("BG radius (pixels):", rollingBallRadius, 0);
+        gd.addNumericField("BG smoothing sigma (px):", bgSmoothing, 1);
         gd.addCheckbox("Multi-threaded processing", useMultiThread);
         gd.addCheckbox("Save parameters", saveParams);
         
@@ -158,9 +258,15 @@ public class Intensity_Modulated_Display implements PlugIn {
         
         if (gd.wasCanceled()) return false;
         
-        // Get values
-        fretIndex = gd.getNextChoiceIndex();
-        cfpIndex = gd.getNextChoiceIndex();
+        // Get values (branch by input mode)
+        if (isMultiChannel) {
+            multiIndex = gd.getNextChoiceIndex();
+            acceptorChannel = (int) gd.getNextNumber();
+            donorChannel = (int) gd.getNextNumber();
+        } else {
+            fretIndex = gd.getNextChoiceIndex();
+            cfpIndex = gd.getNextChoiceIndex();
+        }
         rmax = gd.getNextNumber();
         rmin = gd.getNextNumber();
         dmax = gd.getNextNumber();
@@ -169,7 +275,9 @@ public class Intensity_Modulated_Display implements PlugIn {
         lutChoice = gd.getNextChoice();
         testMode = gd.getNextBoolean();
         subtractBG = gd.getNextBoolean();
+        bgMethod = gd.getNextChoice();
         rollingBallRadius = gd.getNextNumber();
+        bgSmoothing = gd.getNextNumber();
         useMultiThread = gd.getNextBoolean();
         saveParams = gd.getNextBoolean();
         
@@ -206,11 +314,18 @@ public class Intensity_Modulated_Display implements PlugIn {
         
         // Background subtraction (use IJ.run for native speed)
         // Important: Do this BEFORE extracting pixel data for mask
+        // Uses the "Subtract Background Plus" plugin. The command name has NO "..."
+        // suffix. For stacks, the " stack" option must be appended so that
+        // IJ.setupDialog enables DOES_STACKS and every slice is processed
+        // (PARALLELIZE_STACKS alone only parallelizes; it does not enable stack mode).
         if (subtractBG) {
-            IJ.log("Subtracting background (radius=" + rollingBallRadius + ")...");
+            IJ.log("Subtracting background: " + bgMethod
+                   + " (radius=" + rollingBallRadius + ", smoothing=" + bgSmoothing + ")...");
             String stackOpt = nSlices > 1 ? " stack" : "";
-            IJ.run(fretImp, "Subtract Background...", "rolling=" + rollingBallRadius + stackOpt);
-            IJ.run(cfpImp, "Subtract Background...", "rolling=" + rollingBallRadius + stackOpt);
+            String bgOptions = "method=[" + bgMethod + "] radius=" + rollingBallRadius
+                             + " smoothing=" + bgSmoothing + " background=0 shrink=1" + stackOpt;
+            IJ.run(fretImp, "Subtract Background Plus", bgOptions);
+            IJ.run(cfpImp, "Subtract Background Plus", bgOptions);
         }
         
         // Load LUT colors
@@ -528,10 +643,18 @@ public class Intensity_Modulated_Display implements PlugIn {
                     dmin = Double.parseDouble(line.substring(5));
                 } else if (line.startsWith("rolling_ball_radius=")) {
                     rollingBallRadius = Double.parseDouble(line.substring(20));
+                } else if (line.startsWith("bg_smoothing=")) {
+                    bgSmoothing = Double.parseDouble(line.substring(13));
+                } else if (line.startsWith("bg_method=")) {
+                    bgMethod = line.substring(10).trim();
                 } else if (line.startsWith("lut=")) {
                     lutChoice = line.substring(4).trim();
                 } else if (line.startsWith("mask_source=")) {
                     maskSource = line.substring(12).trim();
+                } else if (line.startsWith("acceptor_channel=")) {
+                    acceptorChannel = Integer.parseInt(line.substring(17).trim());
+                } else if (line.startsWith("donor_channel=")) {
+                    donorChannel = Integer.parseInt(line.substring(14).trim());
                 }
             }
         } catch (Exception e) { 
@@ -553,8 +676,12 @@ public class Intensity_Modulated_Display implements PlugIn {
             w.println("dmax=" + dmax);
             w.println("dmin=" + dmin);
             w.println("rolling_ball_radius=" + rollingBallRadius);
+            w.println("bg_smoothing=" + bgSmoothing);
+            w.println("bg_method=" + bgMethod);
             w.println("lut=" + lutChoice);
             w.println("mask_source=" + maskSource);
+            w.println("acceptor_channel=" + acceptorChannel);
+            w.println("donor_channel=" + donorChannel);
             IJ.log("Parameters saved to: " + paramFile);
         } catch (Exception e) {
             IJ.log("Warning: Could not save parameters");

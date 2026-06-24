@@ -5,6 +5,31 @@ All notable changes to the Intensity Modulated Display (IMD) ImageJ Plugin will 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-06-24
+
+### Added
+- **Multi-channel stack input mode**: select acceptor (FRET) and donor (CFP) channels
+  from a single hyperstack, instead of opening two separate images
+- **Subtract Background Plus integration**: choose Sliding paraboloid (default),
+  Rolling ball, or Morphological opening for background subtraction
+- Dynamic LUT selection listing all LUTs installed in ImageJ (built-in + custom in luts/)
+- Background smoothing sigma parameter
+- Acceptor/donor channel numbers persisted in IMD_parameters.txt
+
+### Fixed
+- Background subtraction now processes **all slices** of a stack. Previously only the
+  first slice was processed because the `stack` option was missing from the plugin call.
+
+### Changed
+- Background subtraction switched from the built-in Rolling Ball to the
+  **Subtract Background Plus** plugin (now a runtime dependency when background
+  subtraction is enabled)
+- Selected LUT name is appended to the output image title
+
+### Requirements
+- The [Subtract Background Plus](https://github.com/yugo8849/subtract-background-plus)
+  plugin must be installed when background subtraction is enabled.
+
 ## [1.0.0] - 2024-11-06
 
 ### Added
