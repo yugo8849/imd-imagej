@@ -200,13 +200,13 @@ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for more solutions.
 - Fixed: background subtraction now applies to all slices of a stack
 - Added background smoothing sigma parameter; channel numbers persisted
 
-### v1.1.0 (2024-12-02)
+### v1.1.0 (2025-12-02)
 - Added dynamic LUT selection from all available ImageJ LUTs
 - Added support for custom LUTs
 - Improved RGB color output consistency
 - LUT name included in output filename
 
-### v1.0.0 (2024-11-06)
+### v1.0.0 (2025-11-06)
 - Initial release
 - Dialog-based image selection
 - Test mode implementation

@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The [Subtract Background Plus](https://github.com/yugo8849/subtract-background-plus)
   plugin must be installed when background subtraction is enabled.
 
-## [1.0.0] - 2024-11-06
+## [1.0.0] - 2025-11-06
 
 ### Added
 - Interactive dialog for image selection
@@ -100,8 +100,8 @@ Users of the original macro can:
 ## Support
 
 For issues, feature requests, or questions:
-- GitHub Issues: https://github.com/yourusername/IMD-ImageJ-Plugin/issues
-- Email: your.email@example.com
+- GitHub Issues: https://github.com/yugo8849/IMD-ImageJ-Plugin/issues
+- Email: goto.yuhei.4c@kyoto-u.ac.jp
 
 ---
 
