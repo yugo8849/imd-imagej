@@ -24,7 +24,8 @@ Desktop.ini
 # Logs
 *.log
 
-# Release artifacts (keep originals only)
+# Release artifacts
+*.jar
 *.zip.tmp
 
 # Editor files

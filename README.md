@@ -29,7 +29,7 @@ Available both as a compiled plugin (Plugins/FRET menu) and as an editable macro
 
 ### Installation as Plugin (recommended)
 
-1. Download `Intensity_Modulated_Display-2.0.1.jar`
+1. Go to the [Releases](../../releases) page and download the latest `.jar` file.
 2. Copy to ImageJ's `plugins/` folder:
    - Windows: `C:\Program Files\ImageJ\plugins\`
    - Mac: `/Applications/ImageJ.app/plugins/` (right-click app, "Show Package Contents")
